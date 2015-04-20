@@ -1,11 +1,18 @@
 import os
 
-from setuptools import setup, find_packages
+try:
+    from setuptools import setup, find_packages
+except ImportError:
+    import ez_setup
+    ez_setup.use_setuptools()
+    from setuptools import setup, find_packages
 
 def read(*paths):
     """Build a file path from *paths* and return the contents."""
     with open(os.path.join(*paths), 'r') as f:
         return f.read()
+
+requirements = ['sqlalchemy', 'pandas', 'numpy']
 
 setup(
     name='wrds',
@@ -16,8 +23,8 @@ setup(
     license='MIT',
     author='Edwin Hu',
     author_email='eddyhu@gmail.com',
-    packages=find_packages(exclude=['tests*']),
-    install_requires=['sqlalchemy', 'pandas', 'numpy'],
+    packages=find_packages(exclude=['tests*', 'ez_setup']),
+    install_requires = requirements,
     include_package_data=True,
     classifiers=[
         'Development Status :: 5 - Production/Stable',

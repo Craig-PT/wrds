@@ -16,6 +16,7 @@ from pandas.tseries.offsets import *
 from .createtable import CreateTableAs
 from .util import timeit
 
+
 class WRDSQuery(object):
     """Generative interface for querying WRDS tables.
     """
@@ -54,7 +55,7 @@ class WRDSQuery(object):
         as_recarray = kwargs.pop('as_recarray', False)
 
         res = self.query.execute()
-        rows = self._yield_data(res,chunksize,as_recarray,**kwargs)
+        rows = self._yield_data(res, chunksize, as_recarray, **kwargs)
 
         # note: using original options
         if not self.options.get('chunksize'):
@@ -97,24 +98,25 @@ class WRDSQuery(object):
             logging.debug('ResultProxy empty')
             pass
 
-
     def _to_df(self, rows, res, **kwargs):
         """Makes a DataFrame from records with columns.
 
         Should be subclassed to do things like delay, duplicates handling,
         setting the index, etc.
         """
-        return pd.DataFrame.from_records(rows,\
-                    columns=res.keys(), coerce_float=True)
+        return pd.DataFrame.from_records(
+            rows, columns=res.keys(), coerce_float=True)
 
 '''
- ██████╗ ██████╗ ███╗   ███╗██████╗        █████╗ 
-██╔════╝██╔═══██╗████╗ ████║██╔══██╗      ██╔══██╗
-██║     ██║   ██║██╔████╔██║██████╔╝█████╗███████║
-██║     ██║   ██║██║╚██╔╝██║██╔═══╝ ╚════╝██╔══██║
-╚██████╗╚██████╔╝██║ ╚═╝ ██║██║           ██║  ██║
- ╚═════╝ ╚═════╝ ╚═╝     ╚═╝╚═╝           ╚═╝  ╚═╝
+ ██████╗ ██████╗ ███╗   ███╗██████╗
+██╔════╝██╔═══██╗████╗ ████║██╔══██╗
+██║     ██║   ██║██╔████╔██║██████╔╝
+██║     ██║   ██║██║╚██╔╝██║██╔═══╝
+╚██████╗╚██████╔╝██║ ╚═╝ ██║██║
+ ╚═════╝ ╚═════╝ ╚═╝     ╚═╝╚═╝
  '''
+
+
 class FUNDAQuery(WRDSQuery):
     """Generative interface for querying COMPUSTAT.FUNDA."""
 
@@ -162,15 +164,17 @@ class FUNDAQuery(WRDSQuery):
             # BE = SHE + DEFTX - PS;
             funda_vars += [(# Shareholder's Equity
                           sa.func.coalesce(funda.c.seq,
-                                           funda.c.ceq + sa.func.coalesce(funda.c.pstk,0),
+                                           funda.c.ceq + sa.func.coalesce(
+                                               funda.c.pstk, 0),
                                            funda.c.at - funda.c.lt
                                            )
                           +
                           # Deferred Taxes
-                          sa.func.coalesce(funda.c.txditc,funda.c.txdb,0)
+                          sa.func.coalesce(funda.c.txditc, funda.c.txdb, 0)
                           -
                           # Preferred Stock
-                          sa.func.coalesce(funda.c.pstkrv,funda.c.pstkl,funda.c.pstk,0)
+                          sa.func.coalesce(funda.c.pstkrv, funda.c.pstkl,
+                                           funda.c.pstk, 0)
                           ).label('be')]
         if me_comp:
             # ME_COMP = CSHO * PRCC_F;
@@ -178,11 +182,11 @@ class FUNDAQuery(WRDSQuery):
         if nsi:
             # NSI = LOG( CSHO * AJEX / (LAG(CSHO)*LAG(AJEX)) );
             funda_vars += [funda.c[v.lower()] for v in
-                             ('CSHO','AJEX')]
+                             ('CSHO', 'AJEX')]
         if tac:
             # TAC = (( DIF(ACT) - DIF(CHE) ) - ( DIF(LCT) - DIF(DLC) - DIF(TXP) ) - DP) / (AT + LAG(AT))/2;
             funda_vars += [funda.c[v.lower()] for v in
-                             ('ACT','CHE','LCT','DLC','TXP','DP')]
+                             ('ACT', 'CHE', 'LCT', 'DLC', 'TXP', 'DP')]
         if noa:
             # NOA = ( (AT - CHE) - (AT - DLC - DLTT - MIB - PSTK - CEQ) ) / LAG(AT);
             funda_vars += [funda.c[v.lower()] for v in
@@ -218,13 +222,14 @@ class FUNDAQuery(WRDSQuery):
 
         if permno:
             # Merge in PERMNO and PERMCO
-            a = query.alias('a');b = ccmxpf_linktable.alias('b')
+            a = query.alias('a')
+            b = ccmxpf_linktable.alias('b')
 
             # Add in PERMNO and PERMCO from CCMXPF_LINKTABLE
             query = sa.select([a, b.c.lpermno, b.c.lpermco],
                               limit=limit).\
                         where(b.c.linktype.startswith('L')).\
-                        where(b.c.linkprim.in_(['P','C'])).\
+                        where(b.c.linkprim.in_(['P', 'C'])).\
                         where(b.c.usedflag==1).\
                         where((b.c.linkdt <= a.c.datadate) |
                               (b.c.linkdt == None)).\
@@ -257,15 +262,7 @@ class FUNDAQuery(WRDSQuery):
         funda_df.set_index(['gvkey','date'],inplace=True)
         return funda_df
 
-'''
- ██████╗ ██████╗ ███╗   ███╗██████╗        ██████╗ 
-██╔════╝██╔═══██╗████╗ ████║██╔══██╗      ██╔═══██╗
-██║     ██║   ██║██╔████╔██║██████╔╝█████╗██║   ██║
-██║     ██║   ██║██║╚██╔╝██║██╔═══╝ ╚════╝██║▄▄ ██║
-╚██████╗╚██████╔╝██║ ╚═╝ ██║██║           ╚██████╔╝
- ╚═════╝ ╚═════╝ ╚═╝     ╚═╝╚═╝            ╚══▀▀═╝ 
-                                                   
- '''
+
 class FUNDQQuery(WRDSQuery):
     """Generative interface for querying COMPUSTAT.FUNDQ."""
 
@@ -363,23 +360,16 @@ class FUNDQQuery(WRDSQuery):
         # handle duplicates
         fundq_df = _nodup(fundq_df)
 
-        fundq_df.set_index(['gvkey','date'],inplace=True)
+        fundq_df.set_index(['gvkey', 'date'], inplace=True)
         return fundq_df
 
-'''
- ██████╗██████╗ ███████╗██████╗ 
-██╔════╝██╔══██╗██╔════╝██╔══██╗
-██║     ██████╔╝███████╗██████╔╝
-██║     ██╔══██╗╚════██║██╔═══╝ 
-╚██████╗██║  ██║███████║██║     
- ╚═════╝╚═╝  ╚═╝╚══════╝╚═╝     
-                                
- '''
+
 class CRSPQuery(WRDSQuery):
 
-    def __init__(self, freq='msf', engine=None, delist=True, vwm=6, start_date='1925-12-31', end_date='',
-                limit=None, all_vars=None, **kwargs):
-        """Generatively create SQL query to MSF.
+    def __init__(self, freq='msf', engine=None, delist=True, vwm=6,
+                 start_date='1925-12-31', end_date='', limit=None,
+                 all_vars=None, **kwargs):
+        """Create SQL query to CRSP.
 
             Parameters
             ----------
@@ -399,26 +389,26 @@ class CRSPQuery(WRDSQuery):
         """
         super(CRSPQuery, self).__init__(engine, limit)
         logging.info("---- Creating a CRSP query session. ----")
-        assert freq in ('msf','dsf'), "Invalid frequency: {0}".format(freq)
+        assert freq in ('msf', 'dsf'), "Invalid frequency: {0}".format(freq)
 
         sf = self.tables[freq]
         # mse* and dse* files are identical 
         senames = self.tables['senames']
         sedelist = self.tables['sedelist']
 
-        sf_vars = [sf.c.permno, sf.c.permco, sf.c.date,
-                    sf.c.prc, sf.c.shrout, sf.c.ret, sf.c.retx,
-                    (sa.func.abs(sf.c.prc)*sf.c.shrout).label('me')]
+        sf_vars = [sf.c.permno, sf.c.permco, sf.c.date, sf.c.prc,
+                   sf.c.shrout, sf.c.ret, sf.c.retx,
+                   (sa.func.abs(sf.c.prc) * sf.c.shrout).label('me')]
         se_vars = [senames.c.ticker, senames.c.ncusip,
-                    senames.c.shrcd, senames.c.exchcd]
+                   senames.c.shrcd, senames.c.exchcd]
 
         if all_vars:
             sf_vars += sf.c
 
         # Get the unique set of columns/variables
-        sf_vars = list(set(sf.c+sf_vars))
+        sf_vars = list(set(sf.c + sf_vars))
 
-        query = sa.select(sf_vars+se_vars, limit=limit).\
+        query = sa.select(sf_vars + se_vars, limit=limit).\
             where(sf.c.permno == senames.c.permno).\
             where(sf.c.date >= senames.c.namedt).\
             where(sf.c.date <= senames.c.nameendt)
@@ -429,44 +419,44 @@ class CRSPQuery(WRDSQuery):
             query = query.where(sf.c.date <= end_date)
 
         if delist:
-            a = query.alias('a');b = sedelist.alias('b')
+            a = query.alias('a')
+            b = sedelist.alias('b')
 
             delist_where = [a.c.permno == b.c.permno]
             if freq == 'dsf':
                 delist_where += [a.c.date == b.c.dlstdt]
             elif freq == 'msf':
-                delist_where += [sa.func.extract('year',a.c.date) == sa.func.extract('year',b.c.dlstdt),
-                    sa.func.extract('month',a.c.date) == sa.func.extract('month',b.c.dlstdt)]
+                delist_where += \
+                    [sa.func.extract('year', a.c.date) == sa.func.extract(
+                        'year', b.c.dlstdt),
+                     sa.func.extract('month', a.c.date) == sa.func.extract(
+                         'month', b.c.dlstdt)]
 
-            query = sa.select([a,((1+a.c.ret)*\
-                              (1+sa.func.coalesce(b.c.dlret,0))-1).label('ret_adj')],
-                               limit=limit)\
-            .select_from(sa.join(a, b,
-                sa.and_(*delist_where),
-                isouter=True)
-            )
+            query = sa.select(
+                [a, ((1 + a.c.ret) * (1 + sa.func.coalesce(b.c.dlret, 0)) -
+                     1).label('ret_adj')], limit=limit)\
+                .select_from(
+                sa.join(a, b, sa.and_(*delist_where), isouter=True))
 
-        if (freq == 'msf' and vwm):
+        if freq == 'msf' and vwm:
             a = query.alias('a')
-            b = sa.select([sql.fiscal_year(a.c.date,vwm,True).label('fdate'), a]).alias('b')
-            c = sa.select([sql.fiscal_year(a.c.date,vwm,True).label('fdate'),
-                          a.c.date, a.c.permno, a.c.me])\
-                        .where(sa.func.extract('month',a.c.date) == vwm).alias('c')
-            query = sa.select([b,
-                              (c.c.me*sa.func.exp(
-                                  sa.func.sum(sa.func.ln(1+sa.func.coalesce(b.c.ret,0)))\
-                                  .over(partition_by=[b.c.permno,
-                                        sa.func.extract('year',b.c.fdate)],
-                                        order_by=[b.c.fdate]))).label('vweight')
-                              ])\
-                        .select_from(
-                            sa.join(b, c,
-                                sa.and_(
-                                    b.c.permno == c.c.permno,
-                                    sa.func.extract('year',b.c.fdate) == sa.func.extract('year',c.c.fdate)+1
-                                ),
-                            isouter=True)
-                        )
+            b = sa.select([sql.fiscal_year(a.c.date, vwm, True).label(
+                'fdate'), a]).alias('b')
+            c = sa.select([sql.fiscal_year(a.c.date, vwm, True).label(
+                'fdate'), a.c.date, a.c.permno, a.c.me])\
+                .where(sa.func.extract('month', a.c.date) == vwm).alias('c')
+            query = sa.select(
+                [b, (c.c.me * sa.func.exp(
+                    sa.func.sum(sa.func.ln(1 + sa.func.coalesce(b.c.ret, 0)))\
+                    .over(partition_by=[b.c.permno, sa.func.extract('year',
+                                                                    b.c.fdate)],
+                          order_by=[b.c.fdate]))).label('vweight')])\
+                .select_from(
+                sa.join(b, c, sa.and_(b.c.permno == c.c.permno,
+                                      sa.func.extract('year', b.c.fdate) ==
+                                      sa.func.extract('year', c.c.fdate) +
+                                      1), isouter=True)
+            )
 
         logging.debug(query)
         self.query = query
@@ -480,13 +470,6 @@ class CRSPQuery(WRDSQuery):
         crsp_df.set_index(['permno','date'],inplace=True)
         return crsp_df
 
-'''
- ██████╗ ████████╗██╗  ██╗███████╗██████╗ 
-██╔═══██╗╚══██╔══╝██║  ██║██╔════╝██╔══██╗
-██║   ██║   ██║   ███████║█████╗  ██████╔╝
-██║   ██║   ██║   ██╔══██║██╔══╝  ██╔══██╗
-╚██████╔╝   ██║   ██║  ██║███████╗██║  ██║
-'''
 
 class CCMNamesQuery(WRDSQuery):
 

@@ -1,3 +1,9 @@
+# Pycharm files
+.idea*
+
+# Distribution / packaging                                                                                                                                                        
+*.egg-info/
+
 #################
 ## Eclipse
 #################
